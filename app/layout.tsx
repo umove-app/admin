@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HR Project",
-  description: "Modern HR management application",
+  title: "UMove Admin",
+  description: "Modern Logistics Management Application",
 };
 
 export default function RootLayout({
