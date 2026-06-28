@@ -10,12 +10,24 @@ export enum OrderStatus {
   PENDING = 'PENDING',
   ASSIGNED = 'ASSIGNED',
   ACCEPTED = 'ACCEPTED',
+  CREATED = 'CREATED',
+  DRIVER_ASSIGNED = 'DRIVER_ASSIGNED',
   EN_ROUTE_TO_PICKUP = 'EN_ROUTE_TO_PICKUP',
   ARRIVED_AT_PICKUP = 'ARRIVED_AT_PICKUP',
+  PICKED_UP = 'PICKED_UP',
   STARTED = 'STARTED',
+  EN_ROUTE_TO_DROPOFF = 'EN_ROUTE_TO_DROPOFF',
+  DELIVERED = 'DELIVERED',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
   FAILED = 'FAILED',
+}
+
+export enum OrderType {
+  MOVE_TRANSPORT = 'MOVE_TRANSPORT',
+  PARCEL_DELIVERY = 'PARCEL_DELIVERY',
+  PASSENGER = 'PASSENGER',
+  GOODS = 'GOODS',
 }
 
 export enum VerificationStatus {
@@ -88,29 +100,39 @@ export interface Order {
   customerId: string;
   driverId?: string;
   vehicleTypeId: string;
+  orderType: OrderType;
   status: OrderStatus;
   pickupAddress: string;
-  pickupLatitude: number;
-  pickupLongitude: number;
+  pickupLatitude: number | string;
+  pickupLongitude: number | string;
   destinationAddress: string;
-  destinationLatitude: number;
-  destinationLongitude: number;
-  distance?: number;
-  estimatedDistance?: number;
-  estimatedPrice: number;
-  finalPrice?: number;
-  total?: number;
+  destinationLatitude: number | string;
+  destinationLongitude: number | string;
+  // Decimal columns are serialized as strings by the API.
+  distance?: number | string;
+  estimatedDistance?: number | string;
+  actualDistance?: number | string;
+  // Pricing — `subtotal` and `total` are the real API fields.
+  subtotal?: number | string;
+  vat?: number | string;
+  discount?: number | string;
+  total?: number | string;
+  currency?: string;
+  // Legacy aliases kept for back-compat with older API shapes.
+  estimatedPrice?: number | string;
+  finalPrice?: number | string;
   pickupTime?: string;
   recipientName?: string;
   recipientPhone?: string;
   itemDescription?: string;
   specialInstructions?: string;
   promoCode?: string;
-  discountAmount?: number;
+  discountAmount?: number | string;
   createdAt: string;
   customer?: User;
   driver?: User;
   vehicleType?: VehicleType;
+  vehicleTypeEntity?: VehicleType;
   payment?: Payment;
   review?: Review;
 }
@@ -131,8 +153,8 @@ export interface VehicleType {
   name: string;
   description: string;
   capacity: number;
-  basePrice: number;
-  pricePerKm: number;
+  basePrice: number | string;
+  pricePerKm: number | string;
   imageUrl?: string;
   isActive: boolean;
   availableCountries?: string[];

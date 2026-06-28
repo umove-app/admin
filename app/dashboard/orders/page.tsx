@@ -2,10 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { adminApi } from '@/lib/api';
-import { Order, OrderStatus } from '@/lib/types';
-import { formatNumber } from '@/lib/utils';
+import { Order, OrderStatus, OrderType } from '@/lib/types';
+import { formatNumber, formatCurrency } from '@/lib/utils';
 import { useDialog } from '@/components/ui/action-dialog';
-import { Package, MapPin, User, DollarSign } from 'lucide-react';
+import {
+  Package,
+  MapPin,
+  User,
+  Wallet,
+  Route,
+  Truck,
+  UserRound,
+  Car,
+} from 'lucide-react';
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -58,13 +67,18 @@ export default function OrdersPage() {
   };
 
   const getStatusBadge = (status: OrderStatus) => {
-    const badges = {
+    const badges: Partial<Record<OrderStatus, string>> = {
       [OrderStatus.PENDING]: 'bg-yellow-100 text-yellow-800',
+      [OrderStatus.CREATED]: 'bg-yellow-100 text-yellow-800',
       [OrderStatus.ASSIGNED]: 'bg-blue-100 text-blue-800',
+      [OrderStatus.DRIVER_ASSIGNED]: 'bg-blue-100 text-blue-800',
       [OrderStatus.ACCEPTED]: 'bg-indigo-100 text-indigo-800',
       [OrderStatus.EN_ROUTE_TO_PICKUP]: 'bg-purple-100 text-purple-800',
       [OrderStatus.ARRIVED_AT_PICKUP]: 'bg-orange-100 text-orange-800',
+      [OrderStatus.PICKED_UP]: 'bg-teal-100 text-teal-800',
       [OrderStatus.STARTED]: 'bg-green-100 text-green-800',
+      [OrderStatus.EN_ROUTE_TO_DROPOFF]: 'bg-teal-100 text-teal-800',
+      [OrderStatus.DELIVERED]: 'bg-green-100 text-green-800',
       [OrderStatus.COMPLETED]: 'bg-green-100 text-green-800',
       [OrderStatus.CANCELLED]: 'bg-red-100 text-red-800',
       [OrderStatus.FAILED]: 'bg-red-100 text-red-800',
@@ -72,12 +86,32 @@ export default function OrdersPage() {
     return badges[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-    }).format(amount);
-  };
+  // The price actually shown on an order. Decimal fields come back as strings
+  // from the API; `total`/`subtotal` are the real columns, with the legacy
+  // `finalPrice`/`estimatedPrice` kept as fallbacks.
+  const orderPrice = (order: Order) =>
+    order.total ?? order.subtotal ?? order.finalPrice ?? order.estimatedPrice;
+
+  const orderDistance = (order: Order) =>
+    order.estimatedDistance ?? order.actualDistance ?? order.distance;
+
+  // Classify each order as a passenger trip or goods delivery for the badge.
+  const isPassengerOrder = (order: Order) =>
+    order.orderType === OrderType.PASSENGER ||
+    order.orderType === OrderType.MOVE_TRANSPORT;
+
+  const tripTypeMeta = (order: Order) =>
+    isPassengerOrder(order)
+      ? {
+          label: 'Passenger Trip',
+          className: 'bg-sky-50 text-sky-700 ring-1 ring-sky-200',
+          Icon: UserRound,
+        }
+      : {
+          label: 'Goods Delivery',
+          className: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+          Icon: Package,
+        };
 
   if (loading && orders.length === 0) {
     return (
@@ -121,79 +155,111 @@ export default function OrdersPage() {
 
       {/* Orders Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {orders.map((order) => (
-          <div
-            key={order.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => viewOrderDetails(order.id)}
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Order #{order.id.slice(0, 8)}
-                </h3>
-                <p className="text-sm text-gray-500">
-                  {new Date(order.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <span
-                className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(
-                  order.status
-                )}`}
-              >
-                {order.status}
-              </span>
-            </div>
+        {orders.map((order) => {
+          const trip = tripTypeMeta(order);
+          const TripIcon = trip.Icon;
+          return (
+            <div
+              key={order.id}
+              className="group relative bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg hover:border-indigo-200 transition-all cursor-pointer"
+              onClick={() => viewOrderDetails(order.id)}
+            >
+              {/* Trip-type accent bar */}
+              <div
+                className={`h-1 w-full ${
+                  isPassengerOrder(order) ? 'bg-sky-500' : 'bg-amber-500'
+                }`}
+              />
 
-            <div className="space-y-3">
-              <div className="flex items-start text-sm">
-                <User className="w-4 h-4 mr-2 mt-0.5 text-gray-400" />
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {order.customer?.firstName} {order.customer?.lastName}
-                  </p>
-                  <p className="text-gray-500">{order.customer?.phoneNumber}</p>
-                </div>
-              </div>
-
-              {order.driver && (
-                <div className="flex items-start text-sm">
-                  <Package className="w-4 h-4 mr-2 mt-0.5 text-gray-400" />
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      Driver: {order.driver.firstName} {order.driver.lastName}
+              <div className="p-6">
+                {/* Header: trip type + status */}
+                <div className="flex items-start justify-between gap-3 mb-4">
+                  <div className="min-w-0">
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full ${trip.className}`}
+                    >
+                      <TripIcon className="w-3.5 h-3.5" />
+                      {trip.label}
+                    </span>
+                    <h3 className="mt-2 text-base font-semibold text-gray-900 truncate">
+                      Order #{order.id.slice(0, 8)}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {new Date(order.createdAt).toLocaleString()}
                     </p>
-                    <p className="text-gray-500">{order.driver.phoneNumber}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadge(
+                      order.status
+                    )}`}
+                  >
+                    {order.status}
+                  </span>
+                </div>
+
+                {/* People */}
+                <div className="space-y-3">
+                  <div className="flex items-start text-sm">
+                    <User className="w-4 h-4 mr-2 mt-0.5 text-gray-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">
+                        {order.customer?.firstName} {order.customer?.lastName}
+                      </p>
+                      <p className="text-gray-500 truncate">
+                        {order.customer?.phoneNumber}
+                      </p>
+                    </div>
+                  </div>
+
+                  {order.driver ? (
+                    <div className="flex items-start text-sm">
+                      <Car className="w-4 h-4 mr-2 mt-0.5 text-gray-400 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
+                          Driver: {order.driver.firstName} {order.driver.lastName}
+                        </p>
+                        <p className="text-gray-500 truncate">
+                          {order.driver.phoneNumber}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-sm text-gray-400">
+                      <Car className="w-4 h-4 mr-2 shrink-0" />
+                      <span className="italic">No driver assigned</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Route */}
+                <div className="mt-4 rounded-lg bg-gray-50 p-3 space-y-2">
+                  <div className="flex items-start text-sm">
+                    <MapPin className="w-4 h-4 mr-2 mt-0.5 text-green-500 shrink-0" />
+                    <p className="text-gray-700 truncate">{order.pickupAddress}</p>
+                  </div>
+                  <div className="flex items-start text-sm">
+                    <MapPin className="w-4 h-4 mr-2 mt-0.5 text-red-500 shrink-0" />
+                    <p className="text-gray-700 truncate">
+                      {order.destinationAddress}
+                    </p>
                   </div>
                 </div>
-              )}
 
-              <div className="flex items-start text-sm">
-                <MapPin className="w-4 h-4 mr-2 mt-0.5 text-green-500" />
-                <div>
-                  <p className="text-gray-600">From: {order.pickupAddress}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start text-sm">
-                <MapPin className="w-4 h-4 mr-2 mt-0.5 text-red-500" />
-                <div>
-                  <p className="text-gray-600">To: {order.destinationAddress}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                <div className="flex items-center text-sm text-gray-600">
-                  <DollarSign className="w-4 h-4 mr-1" />
-                  {formatCurrency(order.finalPrice || order.estimatedPrice)}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {formatNumber(order.estimatedDistance ?? order.distance)} km
+                {/* Footer: price + distance */}
+                <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
+                  <div className="flex items-center text-base font-semibold text-gray-900">
+                    <Wallet className="w-4 h-4 mr-1.5 text-indigo-500" />
+                    {formatCurrency(orderPrice(order), order.currency)}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Route className="w-4 h-4 mr-1.5 text-gray-400" />
+                    {formatNumber(orderDistance(order))} km
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Pagination */}
@@ -244,9 +310,22 @@ export default function OrdersPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
                     <p className="mt-1 text-sm text-gray-900">
-                      {selectedOrder.vehicleType?.name || 'N/A'}
+                      {selectedOrder.vehicleTypeEntity?.name ||
+                        selectedOrder.vehicleType?.name ||
+                        'N/A'}
                     </p>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Order Type</label>
+                  <span
+                    className={`inline-flex items-center gap-1.5 mt-1 px-2.5 py-1 text-xs font-semibold rounded-full ${
+                      tripTypeMeta(selectedOrder).className
+                    }`}
+                  >
+                    {isPassengerOrder(selectedOrder) ? 'Passenger Trip' : 'Goods Delivery'}
+                  </span>
                 </div>
 
                 <div>
@@ -307,18 +386,21 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Distance</label>
-                    <p className="mt-1 text-sm text-gray-900">{formatNumber(selectedOrder.estimatedDistance ?? selectedOrder.distance)} km</p>
+                    <p className="mt-1 text-sm text-gray-900">{formatNumber(orderDistance(selectedOrder))} km</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Estimated Price</label>
+                    <label className="block text-sm font-medium text-gray-700">Subtotal</label>
                     <p className="mt-1 text-sm text-gray-900">
-                      {formatCurrency(selectedOrder.estimatedPrice)}
+                      {formatCurrency(
+                        selectedOrder.subtotal ?? selectedOrder.estimatedPrice,
+                        selectedOrder.currency,
+                      )}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Final Price</label>
+                    <label className="block text-sm font-medium text-gray-700">Total</label>
                     <p className="mt-1 text-sm font-bold text-green-600">
-                      {formatCurrency(selectedOrder.finalPrice || selectedOrder.estimatedPrice)}
+                      {formatCurrency(orderPrice(selectedOrder), selectedOrder.currency)}
                     </p>
                   </div>
                 </div>

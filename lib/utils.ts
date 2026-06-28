@@ -29,3 +29,22 @@ export function formatNumber(
   const n = typeof value === "number" ? value : parseFloat(String(value));
   return Number.isFinite(n) ? n.toFixed(digits) : "N/A";
 }
+
+/**
+ * Safely format a currency amount. Postgres decimal columns (price/total) are
+ * serialized as strings by the API, and some fields may be null/undefined.
+ * Coerces to a finite number before formatting; returns "N/A" otherwise so the
+ * UI never shows "NaN".
+ */
+export function formatCurrency(
+  value: number | string | null | undefined,
+  currency = "NGN",
+): string {
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (!Number.isFinite(n)) return "N/A";
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+  }).format(n);
+}

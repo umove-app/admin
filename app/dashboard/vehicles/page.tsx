@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { vehicleApi } from '@/lib/api';
 import { VehicleType } from '@/lib/types';
+import { formatCurrency } from '@/lib/utils';
 import { useDialog } from '@/components/ui/action-dialog';
 import { Plus, Edit, Trash2, Power, PowerOff, X } from 'lucide-react';
 
@@ -81,8 +82,8 @@ export default function VehiclesPage() {
       name: vehicle.name,
       description: vehicle.description,
       capacity: vehicle.capacity,
-      basePrice: vehicle.basePrice,
-      pricePerKm: vehicle.pricePerKm,
+      basePrice: Number(vehicle.basePrice) || 0,
+      pricePerKm: Number(vehicle.pricePerKm) || 0,
       availableCountries: [], // Note: API response doesn't include countries, adjust based on actual API
       isActive: vehicle.isActive,
     });
@@ -219,13 +220,7 @@ export default function VehiclesPage() {
     }
   };
 
-  const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const formatPrice = (price: number | string): string => formatCurrency(price);
 
   if (loading && vehicles.length === 0) {
     return (
