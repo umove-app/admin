@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api';
+import { formatCoord } from '@/lib/utils';
 import { RefreshCw, MapPin, User, Phone, Clock, Circle, Navigation, Eye } from 'lucide-react';
 import Link from 'next/link';
 
@@ -269,7 +270,7 @@ export default function LiveTrackingPage() {
                                                 <div className="flex items-center justify-between text-sm">
                                                     <div className="text-gray-500">
                                                         <MapPin className="w-4 h-4 inline mr-1" />
-                                                        {driver.latitude.toFixed(6)}, {driver.longitude.toFixed(6)}
+                                                        {formatCoord(driver.latitude)}, {formatCoord(driver.longitude)}
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <a

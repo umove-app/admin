@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { formatCoord } from '@/lib/utils';
 import {
     ArrowLeft,
     MapPin,
@@ -316,7 +317,7 @@ export default function EmergencyDetailPage() {
                                 />
                             </div>
                             <div className="text-sm text-gray-600">
-                                <strong>Coordinates:</strong> {emergency.latitude.toFixed(6)}, {emergency.longitude.toFixed(6)}
+                                <strong>Coordinates:</strong> {formatCoord(emergency.latitude)}, {formatCoord(emergency.longitude)}
                             </div>
                             {emergency.address && (
                                 <div className="text-sm text-gray-600">
