@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '@/lib/api';
 import { Order, OrderStatus } from '@/lib/types';
+import { formatNumber } from '@/lib/utils';
 import { useDialog } from '@/components/ui/action-dialog';
 import { Package, MapPin, User, DollarSign } from 'lucide-react';
 
@@ -187,7 +188,7 @@ export default function OrdersPage() {
                   {formatCurrency(order.finalPrice || order.estimatedPrice)}
                 </div>
                 <div className="text-sm text-gray-600">
-                  {order.distance.toFixed(1)} km
+                  {formatNumber(order.estimatedDistance ?? order.distance)} km
                 </div>
               </div>
             </div>
@@ -306,7 +307,7 @@ export default function OrdersPage() {
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Distance</label>
-                    <p className="mt-1 text-sm text-gray-900">{selectedOrder.distance.toFixed(1)} km</p>
+                    <p className="mt-1 text-sm text-gray-900">{formatNumber(selectedOrder.estimatedDistance ?? selectedOrder.distance)} km</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Estimated Price</label>

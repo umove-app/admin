@@ -95,9 +95,11 @@ export interface Order {
   destinationAddress: string;
   destinationLatitude: number;
   destinationLongitude: number;
-  distance: number;
+  distance?: number;
+  estimatedDistance?: number;
   estimatedPrice: number;
   finalPrice?: number;
+  total?: number;
   pickupTime?: string;
   recipientName?: string;
   recipientPhone?: string;

@@ -17,3 +17,15 @@ export function formatCoord(
   const n = typeof value === "number" ? value : parseFloat(String(value));
   return Number.isFinite(n) ? n.toFixed(digits) : "N/A";
 }
+
+/**
+ * Safely format a numeric value (e.g. distance) that may be a string, null, or
+ * undefined. Returns "N/A" for missing/invalid values instead of throwing.
+ */
+export function formatNumber(
+  value: number | string | null | undefined,
+  digits = 1,
+): string {
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  return Number.isFinite(n) ? n.toFixed(digits) : "N/A";
+}
